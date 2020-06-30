@@ -25,12 +25,15 @@ class ChainSelector:
     Remove hydrogens, waters and ligands. Only use model 0 by default.
     """
 
-    def __init__(self, chain_id, start, end, model_id=0):
+    def __init__(self, chain_id, start, end, model_id=0, keep_hetatms=False, keep_hydrogens=False, keep_waters=False):
         """Initialize the class."""
         self.chain_id = chain_id
         self.start = start
         self.end = end
         self.model_id = model_id
+        self.keep_hetatms = keep_hetatms
+        self.keep_hydrogens = keep_hydrogens
+        self.keep_waters = keep_waters
 
     def accept_model(self, model):
         """Verify if model match the model identifier."""
@@ -50,8 +53,11 @@ class ChainSelector:
         # residue - between start and end
         hetatm_flag, resseq, icode = residue.get_id()
         if hetatm_flag != " ":
-            # skip HETATMS
-            return 0
+            if hetatm_flag == "W":
+                # It is a water molecule
+                return self.keep_waters
+            else:
+                return self.keep_hetatms
         if icode != " ":
             warnings.warn(
                 "WARNING: Icode %s at position %s" % (icode, resseq), BiopythonWarning
@@ -61,10 +67,10 @@ class ChainSelector:
         return 0
 
     def accept_atom(self, atom):
-        """Verify if atoms are not Hydrogen."""
+        """Verify if atoms are not Hydrogen, and filter them according to the parameter."""
         # atoms - get rid of hydrogens
         name = atom.get_id()
-        if _hydrogen.match(name):
+        if not self.keep_hydrogens and _hydrogen.match(name):
             return 0
         else:
             return 1
